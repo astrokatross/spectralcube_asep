@@ -1,0 +1,74 @@
+#! /bin/bash -l
+
+set -x
+
+obsnum=OBSNUM
+base=BASEDIR
+debug=DEBUG
+container=${GXCONTAINER}
+
+
+if [[ -f "${obsnum}" ]]
+then
+    taskid="${SLURM_ARRAY_TASK_ID}"
+    jobid="${SLURM_ARRAY_JOB_ID}"
+
+    echo "obsfile ${obsnum}"
+    obsnum=$(sed -n -e "${SLURM_ARRAY_TASK_ID}"p "${obsnum}")
+    echo "image obsid ${obsnum}"
+else
+    taskid=1
+    jobid="${SLURM_JOB_ID}"
+fi
+
+echo "jobid: ${jobid}"
+echo "taskid: ${taskid}"
+
+
+ramDiskBase=$(mktemp -d /dev/shm/${jobid}_${taskid}.XXX)
+tempdir="${ramDiskBase}${jobid}_${taskid}"
+mkdir -p "$tempdir"
+trap "rm -rf $tempdir" EXIT
+
+datadir="${base}"
+cd "${datadir}" || exit
+
+cp -rf ${obsnum}.ms ${tempdir}/
+
+
+# Which data column to image
+if [[ ! -z $debug ]]
+then
+    datacolumn="CORRECTED_DATA"
+else
+    datacolumn="DATA"
+fi
+
+# SETUP IMAGING PARAMETERS (TODO: ADAPT FOR EASY USER INPUT)
+#NOTE SOME ARE JUST GRABBED ASSUMING LB CONFIG WHICH I THINK IS A SAFE BET FOR NOW OR HARD CODED FROM TEST IDEA (TODO: MAKE GENERALISED )
+basescale=0.6
+chan=169 #TODO: update to read from metafits 
+imsize=256 
+scale=$(echo "$basescale / $chan" | bc -l) 
+#robust=natural #TESTING JUST NATURAL FOR NOW 
+datacolumn=DATA #SEE ABOVE 
+chansout=3072 #MAY HAVE TO BREAK UP IF PAWSEY UNHAPPY 
+
+
+set -o pipefail
+# Deep clean (for pipeline)
+singularity run -B ${tempdir}/${obsnum}.ms:/input -B ${tempdir}:/tmp $GXCONTAINER wsclean \
+        -abs-mem 60 \
+        -j ${SLURM_CPUS_PER_TASK} \
+        -parallel-gridding ${SLURM_CPUS_PER_TASK} \
+        -temp-dir /tmp \
+        -niter 0 \
+        -name ${obsnum}_spec \
+        -size ${imsize} ${imsize} \
+        -scale ${scale:0:8} \
+        -weight natural \
+        -pol I \
+        -channels-out 3072 \
+        -data-column ${datacolumn} \
+        /input | tee wsclean.log
+
