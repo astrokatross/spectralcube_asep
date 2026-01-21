@@ -68,8 +68,8 @@ then
 fi
 
 
-script="spectral_img_${obsnum}.sh"
-cat "spectral_img.tmpl" | sed -e "s:OBSNUM:${obsnum}:g" \
+script="$SCRIPT_BASE/spectral_img_${obsnum}.sh"
+cat "$SCRIPT_BASE/spectral_img.tmpl" | sed -e "s:OBSNUM:${obsnum}:g" \
                                  -e "s:BASEDIR:${base}:g" \
                                  -e "s:DEBUG:${debug}:g"  > "${script}"
 
