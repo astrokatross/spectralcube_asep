@@ -54,6 +54,9 @@ scale=$(echo "$basescale / $chan" | bc -l)
 datacolumn=DATA #SEE ABOVE 
 chansout=3072 #MAY HAVE TO BREAK UP IF PAWSEY UNHAPPY 
 
+# TODO: Make nicer that it reads from config file to get new centre 
+singularity run -B ${tempdir}/${obsnum}.ms:/input -B ${tempdir}:/tmp $GXCONTAINER chgcentre 
+
 
 set -o pipefail
 # Deep clean (for pipeline)

@@ -14,6 +14,8 @@ echo "obs_spectral_img.sh [-d dep] [-p project] [-z] [-t] obsnum
 exit 1;
 }
 
+source /software/projects/$PAWSEY_PROJECT/$USER/spectral_cube/spectralcube_asep/spectralcube.cfg
+
 #initial variables
 dep=
 tst=
@@ -53,6 +55,8 @@ then
     usage
 fi
 
+base="$SCRATCHDIR/$project/"
+
 if [[ ! -z ${dep} ]]
 then
     if [[ -f ${obsnum} ]]
@@ -76,8 +80,17 @@ chmod 755 "${script}"
 output="spectral_img_${obsnum}.o%A"
 error="spectral_img_${obsnum}.e%A"
 
-sub="sbatch --begin=now+1minutes --account=pawsey0272 --export=ALL  --time=03:00:00 --mem=250G --cpus-per-task=64 --ntasks=1 --ntasks-per-node=1 -M setonix -p work --output=${output} --error=${error}"
+sub="sbatch --begin=now+1minutes --account=$PAWSEY_PROJECT --export=ALL  --time=03:00:00 --cpus-per-task=64 --ntasks=1 --ntasks-per-node=1 -M setonix -p mwa --output=${output} --error=${error}"
 sub="${sub} ${depend} ${script}"
+
+if [[ ! -z ${tst} ]]
+then
+    echo "script is ${script}"
+    echo "submit via:"
+    echo "${sub}"
+    exit 0
+fi
+    
 
 # submit job
 jobid=($(${sub}))
